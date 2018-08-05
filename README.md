@@ -1,10 +1,11 @@
-# wordpress-to-markdown
+# wordpress-to-markdownkmarkdown)
 
 This script uses the standard exported XML file from WordPress, and creates a folder/file structure that contains all of the blog posts, converted to markdown format. It will also download all of the images.
 
 Instructions for exporting your information from WordPress [can be found here](http://en.support.wordpress.com/export/).
 
 This is a upgraded version of the original project. I fixed the issue with `<pre><code>` blocks. Remove some unnecessary dependencies. Add more documentation support.
+Also, I fixed the folder structure. Originally, the folder is Windows only, now it should support both Windows/Mac/Linux out of the box.
 ### Works on my box
 
 **This is highly experimental at best. It was developed for my own use to do a one time conversion from WordPress to markdown for a static generator such as [DocPad](https://github.com/bevry/docpad). It is designed to be used one time and then throw away.**
@@ -14,10 +15,13 @@ This program will put the output into `/out` folder, and also all images will go
 the default image public path has been changed to `/img`
 
 
-To use, please put your exported Wordpress XML into `export.xml`. To run, simply type `node convert.js`.
+1. To use, please put your exported Wordpress XML into `export.xml`.
+2. Install all the necessary dependencies via `npm install`
+3. To run, simply type `node convert.js`.
 ### Technical Details
 
-This uses [xml2js](https://github.com/Leonidas-from-XIV/node-xml2js) to parse the XML easily, and then uses [to-markdown](https://github.com/domchristie/to-markdown) to convert the HTML post content into Markdown.
+This uses [xml2js](https://github.com/Leonidas-from-XIV/node-xml2js) to parse the XML easily, and then uses [to-markdown](https://github.com/domchristie/to-markdown) to convert the HTML post content into Markdown. (Note, we use the modified source here to
+output github flavored markdown)
 
 ### Requirements
 
