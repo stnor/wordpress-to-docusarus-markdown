@@ -16,3 +16,4 @@ node_modules
 export.xml
 out/*
 img/*
+.DS_Store
