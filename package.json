@@ -19,7 +19,7 @@
     "npm": ">=1.2"
   },
   "dependencies": {
-    "to-markdown": "~0.0.1",
+    "he": ">=0.4.1",
     "xml2js": "~0.2.8"
   },
   "main": "convert.js"
