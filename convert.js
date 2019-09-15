@@ -4,6 +4,7 @@ var xml2js = require("xml2js");
 var fs = require("fs");
 var util = require("util");
 var toMarkdown = require("./markdown");
+const slugify = require("slugify");
 
 processExport();
 
@@ -32,7 +33,7 @@ function processExport() {
     });
 }
 
-function processPost(post) {
+async function processPost(post) {
     console.log("Processing Post");
 
     var postTitle = post.title;
@@ -44,7 +45,22 @@ function processPost(post) {
     var slug = post["wp:post_name"];
     console.log("Post slug: " + slug);
 
-    let fname = `${postTitle}.md`;
+    slug = `${slug}` || slugify(`${postTitle}`, { remove: /[*+~.()'"!:@]/g });
+
+    let fname = `index.mdx`;
+
+    if (!slug) {
+        return;
+    }
+
+    try {
+        fs.mkdirSync(`out/${slug}`);
+        fs.mkdirSync(`out/${slug}/img`);
+    } catch (e) {
+        slug = slug + "-2";
+        fs.mkdirSync(`out/${slug}`);
+        fs.mkdirSync(`out/${slug}/img`);
+    }
 
     //Merge categories and tags into tags
     var categories = [];
@@ -76,10 +92,13 @@ function processPost(post) {
 
             var filePath = `out/${slug}/img/${imageName}`;
 
-            downloadFile(url, filePath);
-
-            //Make the image name local relative in the markdown
-            postData = postData.replace(url, `./${imageName}`);
+            try {
+                await downloadFile(url, filePath);
+                //Make the image name local relative in the markdown
+                postData = postData.replace(url, `./${imageName}`);
+            } catch (e) {
+                console.log(`Keeping ref to ${url}`);
+            }
         }
     }
     var markdown = toMarkdown.toMarkdown(postData);
@@ -119,8 +138,10 @@ function processPost(post) {
         "-" +
         getPaddedDayNumber(postDate.getDate()) +
         "\n";
-    if (categories.length > 0)
+    if (categories.length > 0) {
         header += "tags: " + JSON.stringify(categories) + "\n";
+    }
+    header += "author: Swizec Teller";
     header += "---\n";
     header += "\n";
 
@@ -141,6 +162,7 @@ async function downloadFile(url, path) {
         } catch (err) {
             console.error(err);
             console.log("error downloading or writing", url, path);
+            throw err;
         }
     } else {
         console.log("passing 2");
