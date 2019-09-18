@@ -1,16 +1,21 @@
-const { get } = require("httpie");
+const { format } = require("date-fns");
+const wget = require("node-wget-promise");
 
 var xml2js = require("xml2js");
 var fs = require("fs");
 var util = require("util");
-var toMarkdown = require("./markdown");
 const slugify = require("slugify");
+
+const unified = require("unified");
+const parseHTML = require("rehype-parse");
+const rehype2remark = require("rehype-remark");
+const stringify = require("remark-stringify");
 
 processExport();
 
 function processExport() {
     var parser = new xml2js.Parser();
-    fs.readFile("export.xml", function(err, data) {
+    fs.readFile("sample_export.xml", function(err, data) {
         if (err) {
             console.log("Error: " + err);
         }
@@ -26,6 +31,7 @@ function processExport() {
             fs.mkdir("out", function() {
                 for (var i = 0; i < posts.length; i++) {
                     processPost(posts[i]);
+                    return;
                     //console.log(util.inspect(posts[i]));
                 }
             });
@@ -47,19 +53,20 @@ async function processPost(post) {
 
     slug = `${slug}` || slugify(`${postTitle}`, { remove: /[*+~.()'"!:@]/g });
 
-    let fname = `index.mdx`;
-
     if (!slug) {
         return;
     }
 
+    let directory = `${format(postDate, "yyyy-MM-dd")}-${slug}`;
+    let fname = `index.mdx`;
+
     try {
-        fs.mkdirSync(`out/${slug}`);
-        fs.mkdirSync(`out/${slug}/img`);
+        fs.mkdirSync(`out/${directory}`);
+        fs.mkdirSync(`out/${directory}/img`);
     } catch (e) {
-        slug = slug + "-2";
-        fs.mkdirSync(`out/${slug}`);
-        fs.mkdirSync(`out/${slug}/img`);
+        directory = directory + "-2";
+        fs.mkdirSync(`out/${directory}`);
+        fs.mkdirSync(`out/${directory}/img`);
     }
 
     //Merge categories and tags into tags
@@ -90,41 +97,57 @@ async function processPost(post) {
             var urlParts = matches[i].split("/");
             var imageName = urlParts[urlParts.length - 1];
 
-            var filePath = `out/${slug}/img/${imageName}`;
+            var filePath = `out/${directory}/img/${imageName}`;
 
             try {
                 await downloadFile(url, filePath);
                 //Make the image name local relative in the markdown
-                postData = postData.replace(url, `./${imageName}`);
+                postData = postData.replace(url, `./img/${imageName}`);
             } catch (e) {
                 console.log(`Keeping ref to ${url}`);
             }
         }
     }
-    var markdown = toMarkdown.toMarkdown(postData);
 
-    //Fix characters that markdown doesn't like
-    // smart single quotes and apostrophe
-    markdown = markdown.replace(/[\u2018|\u2019|\u201A]/g, "'");
-    // smart double quotes
-    markdown = markdown.replace(/&quot;/g, '"');
-    markdown = markdown.replace(/[\u201C|\u201D|\u201E]/g, '"');
-    // ellipsis
-    markdown = markdown.replace(/\u2026/g, "...");
-    // dashes
-    markdown = markdown.replace(/[\u2013|\u2014]/g, "-");
-    // circumflex
-    markdown = markdown.replace(/\u02C6/g, "^");
-    // open angle bracket
-    markdown = markdown.replace(/\u2039/g, "<");
-    markdown = markdown.replace(/&lt;/g, "<");
-    // close angle bracket
-    markdown = markdown.replace(/\u203A/g, ">");
-    markdown = markdown.replace(/&gt;/g, ">");
-    // spaces
-    markdown = markdown.replace(/[\u02DC|\u00A0]/g, " ");
-    // ampersand
-    markdown = markdown.replace(/&amp;/g, "&");
+    const markdown = await new Promise((resolve, reject) => {
+        unified()
+            .use(parseHTML, {
+                emitParseErrors: true,
+                duplicateAttribute: false
+            })
+            .use(rehype2remark)
+            .use(stringify)
+            .process(postData, (err, markdown) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(markdown.contents);
+                }
+            });
+    });
+
+    // //Fix characters that markdown doesn't like
+    // // smart single quotes and apostrophe
+    // markdown = markdown.replace(/[\u2018|\u2019|\u201A]/g, "'");
+    // // smart double quotes
+    // markdown = markdown.replace(/&quot;/g, '"');
+    // markdown = markdown.replace(/[\u201C|\u201D|\u201E]/g, '"');
+    // // ellipsis
+    // markdown = markdown.replace(/\u2026/g, "...");
+    // // dashes
+    // markdown = markdown.replace(/[\u2013|\u2014]/g, "-");
+    // // circumflex
+    // markdown = markdown.replace(/\u02C6/g, "^");
+    // // open angle bracket
+    // markdown = markdown.replace(/\u2039/g, "<");
+    // markdown = markdown.replace(/&lt;/g, "<");
+    // // close angle bracket
+    // markdown = markdown.replace(/\u203A/g, ">");
+    // markdown = markdown.replace(/&gt;/g, ">");
+    // // spaces
+    // markdown = markdown.replace(/[\u02DC|\u00A0]/g, " ");
+    // // ampersand
+    // markdown = markdown.replace(/&amp;/g, "&");
 
     var header = "";
     header += "---\n";
@@ -139,13 +162,15 @@ async function processPost(post) {
         getPaddedDayNumber(postDate.getDate()) +
         "\n";
     if (categories.length > 0) {
-        header += "tags: " + JSON.stringify(categories) + "\n";
+        header += "categories: " + categories.join(", ") + "\n";
     }
-    header += "author: Swizec Teller";
+    header += "author: Swizec Teller\n";
     header += "---\n";
     header += "\n";
 
-    fs.writeFile(`out/${slug}/${fname}`, header + markdown, function(err) {});
+    fs.writeFile(`out/${directory}/${fname}`, header + markdown, function(
+        err
+    ) {});
 }
 
 async function downloadFile(url, path) {
@@ -154,16 +179,22 @@ async function downloadFile(url, path) {
         url.indexOf(".jpg") >= 0 ||
         url.indexOf(".jpeg") >= 0 ||
         url.indexOf(".png") >= 0 ||
-        url.indexOf(".gif") >= 0
+        url.indexOf(".gif") >= 0 ||
+        url.indexOf(".svg") >= 0
     ) {
-        try {
-            const { data } = await get(url);
-            fs.writeFileSync(path, data);
-        } catch (err) {
-            console.error(err);
-            console.log("error downloading or writing", url, path);
-            throw err;
-        }
+        wget(url, { output: path })
+            .then(meta => {
+                console.log(meta.headers);
+
+                if (!meta.headers["content-type"].includes("image")) {
+                    fs.unlinkSync(path);
+                    throw new Error();
+                }
+            })
+            .catch(err => {
+                console.log(err);
+                console.log("Error downloading", url);
+            });
     } else {
         console.log("passing 2");
         console.log("passing on: " + url + " " + url.indexOf("https:"));
