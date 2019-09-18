@@ -39,6 +39,25 @@ function processExport() {
     });
 }
 
+async function processImage({ url, postData, images, directory }) {
+    var urlParts = url.split("/");
+    var imageName = urlParts[urlParts.length - 1];
+
+    var filePath = `out/${directory}/img/${imageName}`;
+
+    try {
+        await downloadFile(url, filePath);
+        //Make the image name local relative in the markdown
+        postData = postData.replace(url, `./img/${imageName}`);
+        images = [...images, `./img/${imageName}`];
+    } catch (e) {
+        console.log(`Keeping ref to ${url}`);
+        console.log(e);
+    }
+
+    return [postData, images];
+}
+
 async function processPost(post) {
     console.log("Processing Post");
 
@@ -50,6 +69,19 @@ async function processPost(post) {
     console.log("Post length: " + postData.length + " bytes");
     var slug = post["wp:post_name"];
     console.log("Post slug: " + slug);
+
+    const heroURLs = post["wp:postmeta"]
+        .filter(
+            meta =>
+                meta["wp:meta_key"][0].includes("opengraph-image") ||
+                meta["wp:meta_key"][0].includes("twitter-image")
+        )
+        .map(meta => meta["wp:meta_value"][0])
+        .filter(url => url.startsWith("http"));
+
+    let heroImage = "";
+
+    // const heroURL = post["_yoast_wpseo_twitter-image
 
     slug = `${slug}` || slugify(`${postTitle}`, { remove: /[*+~.()'"!:@]/g });
 
@@ -92,24 +124,27 @@ async function processPost(post) {
 
     if (matches != null && matches.length > 0) {
         for (var i = 0; i < matches.length; i++) {
-            //console.log('Post image found: ' + matches[i])
-
             var url = matches[i];
-            var urlParts = matches[i].split("/");
-            var imageName = urlParts[urlParts.length - 1];
-
-            var filePath = `out/${directory}/img/${imageName}`;
-
-            try {
-                await downloadFile(url, filePath);
-                //Make the image name local relative in the markdown
-                postData = postData.replace(url, `./img/${imageName}`);
-                images = [...images, `./img/${imageName}`];
-            } catch (e) {
-                console.log(`Keeping ref to ${url}`);
-                console.log(e);
-            }
+            [postData, images] = await processImage({
+                url,
+                postData,
+                images,
+                directory
+            });
         }
+    }
+
+    if (heroURLs.length > 0) {
+        const url = heroURLs[0];
+        [postData, images] = await processImage({
+            url,
+            postData,
+            images,
+            directory
+        });
+        heroImage = images[images.length - 1];
+    } else {
+        heroImage = images[0];
     }
 
     const markdown = await new Promise((resolve, reject) => {
@@ -145,7 +180,7 @@ async function processPost(post) {
         header += "categories: " + categories.join(", ") + "\n";
     }
     header += "author: Swizec Teller\n";
-    header += `hero: ${images[0]}\n`;
+    header += `hero: ${heroImage}\n`;
     header += "---\n";
     header += "\n";
 
