@@ -81,6 +81,7 @@ async function processPost(post) {
 
     //Find all images
     var patt = new RegExp('(?:src="(.*?)")', "gi");
+    let images = [];
 
     var m;
     var matches = [];
@@ -103,6 +104,7 @@ async function processPost(post) {
                 await downloadFile(url, filePath);
                 //Make the image name local relative in the markdown
                 postData = postData.replace(url, `./img/${imageName}`);
+                images = [...images, `./img/${imageName}`];
             } catch (e) {
                 console.log(`Keeping ref to ${url}`);
                 console.log(e);
@@ -143,6 +145,7 @@ async function processPost(post) {
         header += "categories: " + categories.join(", ") + "\n";
     }
     header += "author: Swizec Teller\n";
+    header += `hero: ${images[0]}\n`;
     header += "---\n";
     header += "\n";
 
