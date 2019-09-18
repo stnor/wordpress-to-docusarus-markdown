@@ -1,5 +1,5 @@
 const { format } = require("date-fns");
-const wget = require("node-wget-promise");
+const fetch = require("node-fetch");
 
 var xml2js = require("xml2js");
 var fs = require("fs");
@@ -105,6 +105,7 @@ async function processPost(post) {
                 postData = postData.replace(url, `./img/${imageName}`);
             } catch (e) {
                 console.log(`Keeping ref to ${url}`);
+                console.log(e);
             }
         }
     }
@@ -125,29 +126,6 @@ async function processPost(post) {
                 }
             });
     });
-
-    // //Fix characters that markdown doesn't like
-    // // smart single quotes and apostrophe
-    // markdown = markdown.replace(/[\u2018|\u2019|\u201A]/g, "'");
-    // // smart double quotes
-    // markdown = markdown.replace(/&quot;/g, '"');
-    // markdown = markdown.replace(/[\u201C|\u201D|\u201E]/g, '"');
-    // // ellipsis
-    // markdown = markdown.replace(/\u2026/g, "...");
-    // // dashes
-    // markdown = markdown.replace(/[\u2013|\u2014]/g, "-");
-    // // circumflex
-    // markdown = markdown.replace(/\u02C6/g, "^");
-    // // open angle bracket
-    // markdown = markdown.replace(/\u2039/g, "<");
-    // markdown = markdown.replace(/&lt;/g, "<");
-    // // close angle bracket
-    // markdown = markdown.replace(/\u203A/g, ">");
-    // markdown = markdown.replace(/&gt;/g, ">");
-    // // spaces
-    // markdown = markdown.replace(/[\u02DC|\u00A0]/g, " ");
-    // // ampersand
-    // markdown = markdown.replace(/&amp;/g, "&");
 
     var header = "";
     header += "---\n";
@@ -182,19 +160,33 @@ async function downloadFile(url, path) {
         url.indexOf(".gif") >= 0 ||
         url.indexOf(".svg") >= 0
     ) {
-        wget(url, { output: path })
-            .then(meta => {
-                console.log(meta.headers);
+        const response = await fetch(url);
+        if (response.status >= 400) {
+            throw new Error("Bad response from server");
+        } else {
+            const type = response.headers.get("Content-Type");
 
-                if (!meta.headers["content-type"].includes("image")) {
-                    fs.unlinkSync(path);
-                    throw new Error();
-                }
-            })
-            .catch(err => {
-                console.log(err);
-                console.log("Error downloading", url);
-            });
+            if (type.includes("image") || type.includes("octet-stream")) {
+                const buffer = await response.arrayBuffer();
+                fs.writeFileSync(path, new Buffer(buffer));
+            } else {
+                throw new Error("Not an image", url);
+            }
+        }
+
+        // wget(url, { output: path })
+        //     .then(meta => {
+        //         console.log(meta.headers);
+
+        //         if (!meta.headers["content-type"].includes("image")) {
+        //             fs.unlinkSync(path);
+        //             throw new Error();
+        //         }
+        //     })
+        //     .catch(err => {
+        //         console.log(err);
+        //         console.log("Error downloading", url);
+        //     });
     } else {
         console.log("passing 2");
         console.log("passing on: " + url + " " + url.indexOf("https:"));
