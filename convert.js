@@ -15,7 +15,7 @@ processExport();
 
 function processExport() {
     var parser = new xml2js.Parser();
-    fs.readFile("sample_export.xml", function(err, data) {
+    fs.readFile("export.xml", function(err, data) {
         if (err) {
             console.log("Error: " + err);
         }
@@ -31,7 +31,6 @@ function processExport() {
             fs.mkdir("out", function() {
                 for (var i = 0; i < posts.length; i++) {
                     processPost(posts[i]);
-                    return;
                     //console.log(util.inspect(posts[i]));
                 }
             });
