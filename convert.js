@@ -29,10 +29,9 @@ function processExport() {
             var posts = result.rss.channel[0].item;
 
             fs.mkdir("out", function() {
-                for (var i = 0; i < posts.length; i++) {
-                    processPost(posts[i]);
-                    //console.log(util.inspect(posts[i]));
-                }
+                posts
+                    .filter(p => p["wp:post_type"][0] === "post")
+                    .forEach(processPost);
             });
         });
     });
@@ -60,13 +59,15 @@ async function processImage({ url, postData, images, directory }) {
 async function processPost(post) {
     console.log("Processing Post");
 
-    var postTitle = post.title;
+    var postTitle = typeof post.title === "string" ? post.title : post.title[0];
     console.log("Post title: " + postTitle);
     var postDate = new Date(post.pubDate);
     console.log("Post Date: " + postDate);
     var postData = post["content:encoded"][0];
     console.log("Post length: " + postData.length + " bytes");
-    var slug = post["wp:post_name"];
+    const slug = slugify(postTitle, {
+        remove: /[^\w\s]/g
+    }).toLowerCase();
     console.log("Post slug: " + slug);
 
     const heroURLs = post["wp:postmeta"]
@@ -80,12 +81,10 @@ async function processPost(post) {
 
     let heroImage = "";
 
-    // const heroURL = post["_yoast_wpseo_twitter-image
-
-    slug = `${slug}` || slugify(`${postTitle}`, { remove: /[*+~.()'"!:@]/g });
-
-    if (!slug) {
-        return;
+    try {
+        format(postDate, "yyyy-MM-dd");
+    } catch (e) {
+        console.log("INAVLID TIME", postDate);
     }
 
     let directory = `${format(postDate, "yyyy-MM-dd")}-${slug}`;
@@ -163,33 +162,36 @@ async function processPost(post) {
             });
     });
 
-    var header = "";
-    header += "---\n";
-    header += "layout: post\n";
-    header += "title: " + postTitle + "\n";
-    header +=
-        "date: " +
-        postDate.getFullYear() +
-        "-" +
-        getPaddedMonthNumber(postDate.getMonth() + 1) +
-        "-" +
-        getPaddedDayNumber(postDate.getDate()) +
-        "\n";
-    if (categories.length > 0) {
-        header += "categories: " + categories.join(", ") + "\n";
+    try {
+        postTitle.replace("\\", "\\\\").replace(/"/g, '\\"');
+    } catch (e) {
+        console.log("FAILED REPLACE", postTitle);
     }
-    header += "author: Swizec Teller\n";
-    header += `hero: ${heroImage}\n`;
-    header += "---\n";
-    header += "\n";
 
-    fs.writeFile(`out/${directory}/${fname}`, header + markdown, function(
-        err
-    ) {});
+    let header = [
+        "---",
+        "layout: post",
+        `title: '${postTitle.replace(/'/g, "''")}'`,
+        `date: ${format(postDate, "yyyy-MM-dd")}`
+    ];
+
+    if (categories.length > 0) {
+        header.push("categories: " + categories.join(", "));
+    }
+
+    header.push("author: Swizec Teller");
+    header.push(`hero: ${heroImage}`);
+    header.push("---");
+    header.push("");
+
+    fs.writeFile(
+        `out/${directory}/${fname}`,
+        header.join("\n") + markdown,
+        function(err) {}
+    );
 }
 
 async function downloadFile(url, path) {
-    //console.log("Attempt downloading " + url + " to " + path + ' ' + url.indexOf("https:") );
     if (
         url.indexOf(".jpg") >= 0 ||
         url.indexOf(".jpeg") >= 0 ||
@@ -210,20 +212,6 @@ async function downloadFile(url, path) {
                 throw new Error("Not an image", url);
             }
         }
-
-        // wget(url, { output: path })
-        //     .then(meta => {
-        //         console.log(meta.headers);
-
-        //         if (!meta.headers["content-type"].includes("image")) {
-        //             fs.unlinkSync(path);
-        //             throw new Error();
-        //         }
-        //     })
-        //     .catch(err => {
-        //         console.log(err);
-        //         console.log("Error downloading", url);
-        //     });
     } else {
         console.log("passing 2");
         console.log("passing on: " + url + " " + url.indexOf("https:"));
