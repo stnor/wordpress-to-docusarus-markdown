@@ -105,6 +105,10 @@ async function processImages({ postData, directory }) {
     return [postData, images];
 }
 
+function cleanupPost(postData) {
+    return postData.replace(/\n\n/g, "</p>").replace(/import/g, "\\import");
+}
+
 async function processPost(post) {
     console.log("Processing Post");
 
@@ -179,8 +183,11 @@ async function processPost(post) {
                 duplicateAttribute: false
             })
             .use(rehype2remark)
-            .use(stringify)
-            .process(postData.replace(/\n\n/g, "</p>"), (err, markdown) => {
+            .use(stringify, {
+                fences: true,
+                listItemIndent: 1
+            })
+            .process(cleanupPost(postData), (err, markdown) => {
                 if (err) {
                     reject(err);
                 } else {
