@@ -93,7 +93,6 @@ async function processImages({ postData, directory }) {
 
     if (matches != null && matches.length > 0) {
         for (let match of matches) {
-            console.log({ match });
             [postData, images] = await processImage({
                 url: match,
                 postData,
@@ -181,7 +180,7 @@ async function processPost(post) {
             })
             .use(rehype2remark)
             .use(stringify)
-            .process(postData, (err, markdown) => {
+            .process(postData.replace(/\n\n/g, "</p>"), (err, markdown) => {
                 if (err) {
                     reject(err);
                 } else {
