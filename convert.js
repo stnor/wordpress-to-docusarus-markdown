@@ -12,6 +12,7 @@ const unified = require("unified");
 const parseHTML = require("rehype-parse");
 const rehype2remark = require("rehype-remark");
 const stringify = require("remark-stringify");
+const imageType = require("image-type");
 
 processExport();
 
@@ -39,29 +40,38 @@ function processExport() {
     });
 }
 
-function constructImageName({ urlParts, pathParts }) {
-    if (pathParts.ext !== "") {
-        return `${pathParts.name}${pathParts.ext}`;
-    } else if (urlParts.searchParams.get("format")) {
-        return `${pathParts.name}.${urlParts.searchParams.get("format")}`;
-    } else {
-        return `${pathParts.name}.png`;
-    }
+function constructImageName({ urlParts, buffer }) {
+    const pathParts = path.parse(urlParts.pathname);
+    const { ext } = imageType(new Buffer(buffer));
+
+    return `${pathParts.name}.${ext}`;
 }
 
 async function processImage({ url, postData, images, directory }) {
     const cleanUrl = htmlentities.decode(url);
-    const urlParts = new URL(cleanUrl),
-        pathParts = path.parse(urlParts.pathname),
-        imageName = constructImageName({ urlParts, pathParts });
+    const urlParts = new URL(cleanUrl);
 
-    const filePath = `out/${directory}/img/${imageName}`;
+    const filePath = `out/${directory}/img`;
 
     try {
-        await downloadFile(cleanUrl, filePath);
-        //Make the image name local relative in the markdown
-        postData = postData.replace(url, `./img/${imageName}`);
-        images = [...images, `./img/${imageName}`];
+        const response = await downloadFile(cleanUrl);
+        const type = response.headers.get("Content-Type");
+
+        if (type.includes("image") || type.includes("octet-stream")) {
+            const buffer = await response.arrayBuffer();
+            const imageName = constructImageName({
+                urlParts,
+                buffer
+            });
+
+            //Make the image name local relative in the markdown
+            postData = postData.replace(url, `./img/${imageName}`);
+            images = [...images, `./img/${imageName}`];
+
+            fs.writeFileSync(`${filePath}/${imageName}`, new Buffer(buffer));
+        } else {
+            throw new Error("Not an image", url);
+        }
     } catch (e) {
         console.log(`Keeping ref to ${url}`);
         console.log(e);
@@ -209,30 +219,12 @@ async function processPost(post) {
     );
 }
 
-async function downloadFile(url, path) {
-    if (
-        url.indexOf("jpg") >= 0 ||
-        url.indexOf("jpeg") >= 0 ||
-        url.indexOf("png") >= 0 ||
-        url.indexOf("gif") >= 0 ||
-        url.indexOf("svg") >= 0
-    ) {
-        const response = await fetch(url);
-        if (response.status >= 400) {
-            throw new Error("Bad response from server");
-        } else {
-            const type = response.headers.get("Content-Type");
-
-            if (type.includes("image") || type.includes("octet-stream")) {
-                const buffer = await response.arrayBuffer();
-                fs.writeFileSync(path, new Buffer(buffer));
-            } else {
-                throw new Error("Not an image", url);
-            }
-        }
+async function downloadFile(url) {
+    const response = await fetch(url);
+    if (response.status >= 400) {
+        throw new Error("Bad response from server");
     } else {
-        console.log("passing 2");
-        console.log("passing on: " + url + " " + url.indexOf("https:"));
+        return response;
     }
 }
 function getPaddedMonthNumber(month) {

@@ -26,6 +26,7 @@
         "date-fns": "^2.2.1",
         "he": "^1.2.0",
         "httpie": "^1.1.2",
+        "image-type": "^4.1.0",
         "node-fetch": "^2.6.0",
         "rehype-parse": "^6.0.1",
         "rehype-remark": "^7.0.0",
