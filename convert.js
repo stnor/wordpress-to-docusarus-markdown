@@ -1,9 +1,10 @@
 const { format } = require("date-fns");
 const fetch = require("node-fetch");
+const path = require("path");
 
-var xml2js = require("xml2js");
-var fs = require("fs");
-var util = require("util");
+const xml2js = require("xml2js");
+const fs = require("fs");
+const util = require("util");
 const slugify = require("slugify");
 const htmlentities = require("he");
 
@@ -38,14 +39,26 @@ function processExport() {
     });
 }
 
-async function processImage({ url, postData, images, directory }) {
-    var urlParts = htmlentities.decode(url).split("/");
-    var imageName = urlParts[urlParts.length - 1];
+function constructImageName({ urlParts, pathParts }) {
+    if (pathParts.ext !== "") {
+        return `${pathParts.name}${pathParts.ext}`;
+    } else if (urlParts.searchParams.get("format")) {
+        return `${pathParts.name}.${urlParts.searchParams.get("format")}`;
+    } else {
+        return `${pathParts.name}.png`;
+    }
+}
 
-    var filePath = `out/${directory}/img/${imageName}`;
+async function processImage({ url, postData, images, directory }) {
+    const cleanUrl = htmlentities.decode(url);
+    const urlParts = new URL(cleanUrl),
+        pathParts = path.parse(urlParts.pathname),
+        imageName = constructImageName({ urlParts, pathParts });
+
+    const filePath = `out/${directory}/img/${imageName}`;
 
     try {
-        await downloadFile(url, filePath);
+        await downloadFile(cleanUrl, filePath);
         //Make the image name local relative in the markdown
         postData = postData.replace(url, `./img/${imageName}`);
         images = [...images, `./img/${imageName}`];
@@ -70,6 +83,7 @@ async function processImages({ postData, directory }) {
 
     if (matches != null && matches.length > 0) {
         for (let match of matches) {
+            console.log({ match });
             [postData, images] = await processImage({
                 url: match,
                 postData,
@@ -197,11 +211,11 @@ async function processPost(post) {
 
 async function downloadFile(url, path) {
     if (
-        url.indexOf(".jpg") >= 0 ||
-        url.indexOf(".jpeg") >= 0 ||
-        url.indexOf(".png") >= 0 ||
-        url.indexOf(".gif") >= 0 ||
-        url.indexOf(".svg") >= 0
+        url.indexOf("jpg") >= 0 ||
+        url.indexOf("jpeg") >= 0 ||
+        url.indexOf("png") >= 0 ||
+        url.indexOf("gif") >= 0 ||
+        url.indexOf("svg") >= 0
     ) {
         const response = await fetch(url);
         if (response.status >= 400) {
