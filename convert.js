@@ -5,6 +5,7 @@ var xml2js = require("xml2js");
 var fs = require("fs");
 var util = require("util");
 const slugify = require("slugify");
+const htmlentities = require("he");
 
 const unified = require("unified");
 const parseHTML = require("rehype-parse");
@@ -26,7 +27,7 @@ function processExport() {
             }
             console.log("Parsed XML");
 
-            var posts = result.rss.channel[0].item;
+            const posts = result.rss.channel[0].item;
 
             fs.mkdir("out", function() {
                 posts
@@ -38,7 +39,7 @@ function processExport() {
 }
 
 async function processImage({ url, postData, images, directory }) {
-    var urlParts = url.split("/");
+    var urlParts = htmlentities.decode(url).split("/");
     var imageName = urlParts[urlParts.length - 1];
 
     var filePath = `out/${directory}/img/${imageName}`;
@@ -51,6 +52,31 @@ async function processImage({ url, postData, images, directory }) {
     } catch (e) {
         console.log(`Keeping ref to ${url}`);
         console.log(e);
+    }
+
+    return [postData, images];
+}
+
+async function processImages({ postData, directory }) {
+    const patt = new RegExp('(?:src="(.*?)")', "gi");
+    let images = [];
+
+    var m;
+    let matches = [];
+
+    while ((m = patt.exec(postData)) !== null) {
+        matches.push(m[1]);
+    }
+
+    if (matches != null && matches.length > 0) {
+        for (let match of matches) {
+            [postData, images] = await processImage({
+                url: match,
+                postData,
+                images,
+                directory
+            });
+        }
     }
 
     return [postData, images];
@@ -100,37 +126,15 @@ async function processPost(post) {
     }
 
     //Merge categories and tags into tags
-    var categories = [];
-    if (post.category != undefined) {
-        for (var i = 0; i < post.category.length; i++) {
-            var cat = post.category[i]["_"];
-            if (cat != "Uncategorized") categories.push(cat);
-            //console.log('CATEGORY: ' + util.inspect(post.category[i]['_']));
-        }
-    }
+    const categories =
+        post.category &&
+        post.category
+            .map(cat => cat["_"])
+            .filter(cat => cat === "Uncategorized");
 
     //Find all images
-    var patt = new RegExp('(?:src="(.*?)")', "gi");
     let images = [];
-
-    var m;
-    var matches = [];
-    while ((m = patt.exec(postData)) !== null) {
-        matches.push(m[1]);
-        //console.log("Found: " + m[1]);
-    }
-
-    if (matches != null && matches.length > 0) {
-        for (var i = 0; i < matches.length; i++) {
-            var url = matches[i];
-            [postData, images] = await processImage({
-                url,
-                postData,
-                images,
-                directory
-            });
-        }
-    }
+    [postData, images] = await processImages({ postData, directory });
 
     if (heroURLs.length > 0) {
         const url = heroURLs[0];
@@ -157,7 +161,7 @@ async function processPost(post) {
                 if (err) {
                     reject(err);
                 } else {
-                    resolve(markdown.contents);
+                    resolve(markdown.contents.trim());
                 }
             });
     });
@@ -175,8 +179,8 @@ async function processPost(post) {
         `date: ${format(postDate, "yyyy-MM-dd")}`
     ];
 
-    if (categories.length > 0) {
-        header.push("categories: " + categories.join(", "));
+    if (categories && categories.length > 0) {
+        header.push(`categories: '${categories.join(", ")}'`);
     }
 
     header.push("author: Swizec Teller");
