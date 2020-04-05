@@ -18,12 +18,12 @@ processExport();
 
 function processExport() {
     var parser = new xml2js.Parser();
-    fs.readFile("export.xml", function(err, data) {
+    fs.readFile("export.xml", function (err, data) {
         if (err) {
             console.log("Error: " + err);
         }
 
-        parser.parseString(data, function(err, result) {
+        parser.parseString(data, function (err, result) {
             if (err) {
                 console.log("Error parsing xml: " + err);
             }
@@ -31,9 +31,9 @@ function processExport() {
 
             const posts = result.rss.channel[0].item;
 
-            fs.mkdir("out", function() {
+            fs.mkdir("out", function () {
                 posts
-                    .filter(p => p["wp:post_type"][0] === "post")
+                    .filter((p) => p["wp:post_type"][0] === "post")
                     .forEach(processPost);
             });
         });
@@ -41,7 +41,9 @@ function processExport() {
 }
 
 function constructImageName({ urlParts, buffer }) {
-    const pathParts = path.parse(urlParts.pathname);
+    const pathParts = path.parse(
+        urlParts.pathname.replace(/^\//, "").replace(/\//g, "-")
+    );
     const { ext } = imageType(new Buffer(buffer));
 
     return `${pathParts.name}.${ext}`;
@@ -49,6 +51,10 @@ function constructImageName({ urlParts, buffer }) {
 
 async function processImage({ url, postData, images, directory }) {
     const cleanUrl = htmlentities.decode(url);
+    if (cleanUrl.startsWith(".")) {
+        console.log(postData);
+        console.log("cleanUrl: ", url);
+    }
     const urlParts = new URL(cleanUrl);
 
     const filePath = `out/${directory}/img`;
@@ -61,7 +67,7 @@ async function processImage({ url, postData, images, directory }) {
             const buffer = await response.arrayBuffer();
             const imageName = constructImageName({
                 urlParts,
-                buffer
+                buffer,
             });
 
             //Make the image name local relative in the markdown
@@ -69,8 +75,6 @@ async function processImage({ url, postData, images, directory }) {
             images = [...images, `./img/${imageName}`];
 
             fs.writeFileSync(`${filePath}/${imageName}`, new Buffer(buffer));
-        } else {
-            throw new Error("Not an image", url);
         }
     } catch (e) {
         console.log(`Keeping ref to ${url}`);
@@ -97,7 +101,7 @@ async function processImages({ postData, directory }) {
                 url: match,
                 postData,
                 images,
-                directory
+                directory,
             });
         }
     }
@@ -119,18 +123,18 @@ async function processPost(post) {
     var postData = post["content:encoded"][0];
     console.log("Post length: " + postData.length + " bytes");
     const slug = slugify(postTitle, {
-        remove: /[^\w\s]/g
+        remove: /[^\w\s]/g,
     }).toLowerCase();
     console.log("Post slug: " + slug);
 
     const heroURLs = post["wp:postmeta"]
         .filter(
-            meta =>
+            (meta) =>
                 meta["wp:meta_key"][0].includes("opengraph-image") ||
                 meta["wp:meta_key"][0].includes("twitter-image")
         )
-        .map(meta => meta["wp:meta_value"][0])
-        .filter(url => url.startsWith("http"));
+        .map((meta) => meta["wp:meta_value"][0])
+        .filter((url) => url.startsWith("http"));
 
     let heroImage = "";
 
@@ -140,7 +144,7 @@ async function processPost(post) {
         console.log("INAVLID TIME", postDate);
     }
 
-    let directory = `${format(postDate, "yyyy-MM-dd")}-${slug}`;
+    let directory = slug;
     let fname = `index.mdx`;
 
     try {
@@ -156,36 +160,45 @@ async function processPost(post) {
     const categories =
         post.category &&
         post.category
-            .map(cat => cat["_"])
-            .filter(cat => cat === "Uncategorized");
+            .map((cat) => cat["_"])
+            .filter((cat) => cat === "Uncategorized");
 
     //Find all images
     let images = [];
+    // if (heroURLs.length > 0) {
+    //     const url = heroURLs[0];
+    //     [postData, images] = await processImage({
+    //         url,
+    //         postData,
+    //         images,
+    //         directory,
+    //     });
+    // }
+
     [postData, images] = await processImages({ postData, directory });
 
-    if (heroURLs.length > 0) {
-        const url = heroURLs[0];
-        [postData, images] = await processImage({
-            url,
+    heroImage = images.find((img) => !img.endsWith("gif"));
+
+    if (!heroImage) {
+        [postData, images] = await processImages({
+            url: "https://i.imgur.com/dFmiPtD.jpg",
             postData,
             images,
-            directory
+            directory,
         });
         heroImage = images[images.length - 1];
-    } else {
-        heroImage = images[0];
     }
 
     const markdown = await new Promise((resolve, reject) => {
         unified()
             .use(parseHTML, {
                 emitParseErrors: true,
-                duplicateAttribute: false
+                duplicateAttribute: false,
             })
             .use(rehype2remark)
             .use(stringify, {
                 fences: true,
-                listItemIndent: 1
+                listItemIndent: 1,
             })
             .process(cleanupPost(postData), (err, markdown) => {
                 if (err) {
@@ -202,11 +215,16 @@ async function processPost(post) {
         console.log("FAILED REPLACE", postTitle);
     }
 
+    const redirect_from = post.link[0]
+        .replace("https://swizec.com", "")
+        .replace("https://www.swizec.com", "");
+
     let header = [
         "---",
-        "layout: post",
         `title: '${postTitle.replace(/'/g, "''")}'`,
-        `date: ${format(postDate, "yyyy-MM-dd")}`
+        `published: ${format(postDate, "yyyy-MM-dd")}`,
+        `redirect_from: 
+            - ${redirect_from}`,
     ];
 
     if (categories && categories.length > 0) {
@@ -214,14 +232,14 @@ async function processPost(post) {
     }
 
     header.push("author: Swizec Teller");
-    header.push(`hero: ${heroImage}`);
+    header.push(`hero: ${heroImage || "../../../defaultHero.jpg"}`);
     header.push("---");
     header.push("");
 
     fs.writeFile(
         `out/${directory}/${fname}`,
         header.join("\n") + markdown,
-        function(err) {}
+        function (err) {}
     );
 }
 

@@ -12,7 +12,10 @@
     },
     "scripts": {
         "clean": "rm -rf out",
-        "convert": "yarn clean && node convert.js"
+        "convert": "yarn clean && node convert.js",
+        "memSize": "export NODE_OPTIONS=--max_old_space_size=4096",
+        "start": "memSize && gatsby develop",
+        "build": "memSize && gatsby build"
     },
     "repository": {
         "type": "git",
