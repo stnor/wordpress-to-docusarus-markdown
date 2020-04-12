@@ -130,6 +130,16 @@ async function processPost(post) {
     }).toLowerCase();
     console.log("Post slug: " + slug);
 
+    // takes the longest description candidate
+    const description = [
+        post.description,
+        ...post["wp:postmeta"].filter(
+            (meta) =>
+                meta["wp:meta_key"][0].includes("metadesc") ||
+                meta["wp:meta_key"][0].includes("description")
+        ),
+    ].sort((a, b) => b.length - a.length)[0];
+
     const heroURLs = post["wp:postmeta"]
         .filter(
             (meta) =>
@@ -221,6 +231,7 @@ async function processPost(post) {
     let header = [
         "---",
         `title: '${postTitle.replace(/'/g, "''")}'`,
+        `description: "${description}"`,
         `published: ${format(postDate, "yyyy-MM-dd")}`,
         `redirect_from: 
             - ${redirect_from}`,
