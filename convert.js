@@ -18,7 +18,7 @@ processExport();
 
 function processExport() {
     var parser = new xml2js.Parser();
-    fs.readFile("export.xml", function (err, data) {
+    fs.readFile("export_full.xml", function (err, data) {
         if (err) {
             console.log("Error: " + err);
         }
@@ -51,10 +51,13 @@ function constructImageName({ urlParts, buffer }) {
 
 async function processImage({ url, postData, images, directory }) {
     const cleanUrl = htmlentities.decode(url);
-    if (cleanUrl.startsWith(".")) {
-        console.log(postData);
-        console.log("cleanUrl: ", url);
+
+    if (cleanUrl.startsWith("./img")) {
+        console.log(`Already processed ${cleanUrl} in ${directory}`);
+
+        return [postData, images];
     }
+
     const urlParts = new URL(cleanUrl);
 
     const filePath = `out/${directory}/img`;
@@ -157,23 +160,19 @@ async function processPost(post) {
     }
 
     //Merge categories and tags into tags
-    const categories =
-        post.category &&
-        post.category
-            .map((cat) => cat["_"])
-            .filter((cat) => cat === "Uncategorized");
+    const categories = post.category && post.category.map((cat) => cat["_"]);
 
     //Find all images
     let images = [];
-    // if (heroURLs.length > 0) {
-    //     const url = heroURLs[0];
-    //     [postData, images] = await processImage({
-    //         url,
-    //         postData,
-    //         images,
-    //         directory,
-    //     });
-    // }
+    if (heroURLs.length > 0) {
+        const url = heroURLs[0];
+        [postData, images] = await processImage({
+            url,
+            postData,
+            images,
+            directory,
+        });
+    }
 
     [postData, images] = await processImages({ postData, directory });
 
