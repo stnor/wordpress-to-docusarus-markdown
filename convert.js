@@ -238,17 +238,16 @@ async function processPost(post) {
     ];
 
     if (categories && categories.length > 0) {
-        header.push(`categories: '${categories.join(", ")}'`);
+        header.push(`categories: "${categories.join(", ")}"`);
     }
 
-    header.push("author: Swizec Teller");
     header.push(`hero: ${heroImage || "../../../defaultHero.jpg"}`);
     header.push("---");
     header.push("");
 
     fs.writeFile(
         `out/${directory}/${fname}`,
-        header.join("\n") + markdown,
+        header.join("\n") + htmlentities.decode(markdown),
         function (err) {}
     );
 }
