@@ -7,6 +7,7 @@ const fs = require("fs");
 const util = require("util");
 const slugify = require("slugify");
 const htmlentities = require("he");
+const articleCleanup = require("./articleCleanup");
 
 const unified = require("unified");
 const parseHTML = require("rehype-parse");
@@ -14,11 +15,11 @@ const rehype2remark = require("rehype-remark");
 const stringify = require("remark-stringify");
 const imageType = require("image-type");
 
-processExport();
+processExport("ageekwithahat.wordpress.2020-04-30.xml");
 
-function processExport() {
+function processExport(file) {
     var parser = new xml2js.Parser();
-    fs.readFile("export_full.xml", function (err, data) {
+    fs.readFile(file, function (err, data) {
         if (err) {
             console.log("Error: " + err);
         }
@@ -112,10 +113,6 @@ async function processImages({ postData, directory }) {
     return [postData, images];
 }
 
-function cleanupPost(postData) {
-    return postData.replace(/\n\n/g, "</p>").replace(/import/g, "\\import");
-}
-
 async function processPost(post) {
     console.log("Processing Post");
 
@@ -205,11 +202,12 @@ async function processPost(post) {
                 duplicateAttribute: false,
             })
             .use(rehype2remark)
+            .use(articleCleanup)
             .use(stringify, {
                 fences: true,
                 listItemIndent: 1,
             })
-            .process(cleanupPost(postData), (err, markdown) => {
+            .process(postData.replace(/\n\n/g, "</p>"), (err, markdown) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -247,7 +245,7 @@ async function processPost(post) {
 
     fs.writeFile(
         `out/${directory}/${fname}`,
-        header.join("\n") + htmlentities.decode(markdown),
+        header.join("\n") + markdown,
         function (err) {}
     );
 }
