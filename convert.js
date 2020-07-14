@@ -96,17 +96,23 @@ async function processImages({ postData, directory }) {
     let matches = [];
 
     while ((m = patt.exec(postData)) !== null) {
-        matches.push(m[1]);
+        if (!m[1].endsWith(".js")) {
+            matches.push(m[1]);
+        }
     }
 
     if (matches != null && matches.length > 0) {
         for (let match of matches) {
-            [postData, images] = await processImage({
-                url: match,
-                postData,
-                images,
-                directory,
-            });
+            try {
+                [postData, images] = await processImage({
+                    url: match,
+                    postData,
+                    images,
+                    directory,
+                });
+            } catch (err) {
+                console.log("ERROR PROCESSING IMAGE", match);
+            }
         }
     }
 
