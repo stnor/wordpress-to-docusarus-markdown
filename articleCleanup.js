@@ -8,11 +8,6 @@ const htmlentities = require("he");
 
 function articleCleanup() {
     return (markdownAST) => {
-        // console.log("-------------");
-        // console.log(
-        //     util.inspect(markdownAST, { showHidden: false, depth: null })
-        // );
-
         visit(markdownAST, "text", (node, index, parent) => {
             node.value = htmlentities.decode(node.value);
             node.value = node.value.replace(/https\:/, "https:");
@@ -23,23 +18,8 @@ function articleCleanup() {
                 node.value.startsWith("http") &&
                 parent.type !== "link"
             ) {
-                node.type = "link";
+                node.type = "text";
                 node.title = null;
-                node.url = node.value;
-                node.children = [
-                    {
-                        type: "text",
-                        value: node.value,
-                    },
-                ];
-                // node.url = node.value;
-                // node.title = null;
-                // node.children = [
-                //     {
-                //         type: "text",
-                //         value: node.url,
-                //     },
-                // ];
             }
 
             return node;

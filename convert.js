@@ -206,6 +206,8 @@ async function processPost(post) {
             .use(stringify, {
                 fences: true,
                 listItemIndent: 1,
+                gfm: false,
+                entities: "escape",
             })
             .process(postData.replace(/\n\n/g, "</p>"), (err, markdown) => {
                 if (err) {
