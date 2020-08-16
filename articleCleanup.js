@@ -27,4 +27,14 @@ function articleCleanup() {
     };
 }
 
-module.exports = articleCleanup;
+function codeBlockDebugger() {
+    return (markdownAST) => {
+        visit(markdownAST, "code", (node, index, parent) => {
+            console.log(node);
+
+            return node;
+        });
+    };
+}
+
+module.exports = { articleCleanup, codeBlockDebugger };

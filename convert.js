@@ -4,10 +4,9 @@ const path = require("path");
 
 const xml2js = require("xml2js");
 const fs = require("fs");
-const util = require("util");
 const slugify = require("slugify");
 const htmlentities = require("he");
-const articleCleanup = require("./articleCleanup");
+const { articleCleanup, codeBlockDebugger } = require("./articleCleanup");
 
 const unified = require("unified");
 const parseHTML = require("rehype-parse");
@@ -15,7 +14,7 @@ const rehype2remark = require("rehype-remark");
 const stringify = require("remark-stringify");
 const imageType = require("image-type");
 
-processExport("ageekwithahat.wordpress.2020-04-30.xml");
+processExport("ageekwithahat.wordpress.2020-08-13.xml");
 
 function processExport(file) {
     var parser = new xml2js.Parser();
@@ -204,10 +203,12 @@ async function processPost(post) {
     const markdown = await new Promise((resolve, reject) => {
         unified()
             .use(parseHTML, {
+                fragment: true,
                 emitParseErrors: true,
                 duplicateAttribute: false,
             })
             .use(rehype2remark)
+            .use(codeBlockDebugger)
             .use(articleCleanup)
             .use(stringify, {
                 fences: true,
