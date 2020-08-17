@@ -1,11 +1,13 @@
 const visit = require("unist-util-visit");
 const util = require("util");
 const htmlentities = require("he");
+const toHTML = require("hast-util-to-html");
 
 // function cleanupPost(postData) {
 //     return postData.replace(/\n\n/g, "</p>").replace(/import/g, "\\import");
 // }
 
+// this is a remark plugin
 function articleCleanup() {
     return (markdownAST) => {
         visit(markdownAST, "text", (node, index, parent) => {
@@ -27,14 +29,62 @@ function articleCleanup() {
     };
 }
 
-function codeBlockDebugger() {
-    return (markdownAST) => {
-        visit(markdownAST, "code", (node, index, parent) => {
-            console.log(node);
+// this is a rehype plugin
+function fixCodeBlocks() {
+    function findCodeBlocks(node) {
+        let nodes = [];
 
-            return node;
-        });
+        if (node.tagName === "pre") {
+            nodes.push(node);
+        } else if (node.children) {
+            for (let child of node.children) {
+                nodes.push(...findCodeBlocks(child));
+            }
+        }
+
+        return nodes;
+    }
+
+    const settings = {
+        quoteSmart: false,
+        closeSelfClosing: false,
+        omitOptionalTags: false,
+        entities: { useShortestReferences: true },
+    };
+
+    return (tree) => {
+        const codeBlocks = findCodeBlocks(tree);
+
+        for (let block of codeBlocks) {
+            block.children = [
+                {
+                    type: "text",
+                    value: toHTML(block, settings)
+                        .replace("</pre>", "")
+                        .replace(/\<pre.*>/, "")
+                        .replace(/\<p\>\<\/p\>/g, "\n\n"),
+                    position: {
+                        start: block.children[0].position.start,
+                        end:
+                            block.children[block.children.length - 1].position
+                                .end,
+                    },
+                },
+            ];
+        }
+
+        // console.log(codeBlocks.length);
+        // console.log("-----------");
+        // console.log(require("util").inspect(codeBlocks, false, null, true));
+        // console.log("----------");
+
+        return tree;
+        // visit(markdownAST, "code", (node, index, parent) => {
+        //     console.log(node);
+
+        //     return node;
+        // });
     };
 }
 
-module.exports = { articleCleanup, codeBlockDebugger };
+module.exports = { articleCleanup, fixCodeBlocks };
