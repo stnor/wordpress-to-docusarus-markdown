@@ -10,6 +10,11 @@ const toHTML = require("hast-util-to-html");
 // this is a remark plugin
 function articleCleanup() {
     return (markdownAST) => {
+        // visit(markdownAST, "pre", (node) => {
+        //     console.log(node);
+        //     return node;
+        // });
+
         visit(markdownAST, "text", (node, index, parent) => {
             node.value = htmlentities.decode(node.value);
             node.value = node.value.replace(/https\:/, "https:");
@@ -26,6 +31,13 @@ function articleCleanup() {
 
             return node;
         });
+    };
+}
+
+// this is a remark plugin
+function codeBlockDebugger() {
+    return (markdownAST) => {
+        console.log(require("util").inspect(markdownAST, false, null, true));
     };
 }
 
@@ -56,26 +68,40 @@ function fixCodeBlocks() {
         const codeBlocks = findCodeBlocks(tree);
 
         for (let block of codeBlocks) {
+            const position = {
+                start: block.children[0].position.start,
+                end: block.children[block.children.length - 1].position.end,
+            };
+
             block.children = [
                 {
-                    type: "text",
-                    value: toHTML(block, settings)
-                        .replace("</pre>", "")
-                        .replace(/\<pre.*>/, "")
-                        .replace(/\<p\>\<\/p\>/g, "\n\n"),
-                    position: {
-                        start: block.children[0].position.start,
-                        end:
-                            block.children[block.children.length - 1].position
-                                .end,
+                    type: "element",
+                    tagName: "code",
+                    properties: {
+                        className: [
+                            `language-${
+                                block.properties && block.properties.lang
+                            }`,
+                        ],
                     },
+                    children: [
+                        {
+                            type: "text",
+                            value: toHTML(block, settings)
+                                .replace("</pre>", "")
+                                .replace(/\<pre.*>/, "")
+                                .replace(/\<p\>\<\/p\>/g, "\n\n"),
+                            position,
+                        },
+                    ],
+                    position,
                 },
             ];
         }
 
         // console.log(codeBlocks.length);
         // console.log("-----------");
-        // console.log(require("util").inspect(codeBlocks, false, null, true));
+        // console.log(require("util").inspect(tree, false, null, true));
         // console.log("----------");
 
         return tree;
@@ -87,4 +113,4 @@ function fixCodeBlocks() {
     };
 }
 
-module.exports = { articleCleanup, fixCodeBlocks };
+module.exports = { articleCleanup, fixCodeBlocks, codeBlockDebugger };

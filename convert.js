@@ -6,7 +6,11 @@ const xml2js = require("xml2js");
 const fs = require("fs");
 const slugify = require("slugify");
 const htmlentities = require("he");
-const { articleCleanup, fixCodeBlocks } = require("./articleCleanup");
+const {
+    articleCleanup,
+    fixCodeBlocks,
+    codeBlockDebugger,
+} = require("./articleCleanup");
 
 const unified = require("unified");
 const parseHTML = require("rehype-parse");
@@ -201,37 +205,6 @@ async function processPost(post) {
     }
 
     const markdown = await new Promise((resolve, reject) => {
-        const tree = unified()
-            .use(parseHTML, {
-                fragment: true,
-                emitParseErrors: true,
-                duplicateAttribute: false,
-            })
-            .use(fixCodeBlocks)
-            .use(rehype2remark)
-            .use(stringify, {
-                fences: true,
-                listItemIndent: 1,
-                gfm: false,
-                entities: "escape",
-            })
-
-            // .use(require("rehype-stringify"), {
-            //     quoteSmart: true,
-            //     closeSelfClosing: true,
-            //     omitOptionalTags: true,
-            //     entities: { useShortestReferences: true },
-            // })
-            .process(postData.replace(/\n\n/g, "</p>"), function (err, result) {
-                console.log("-----------");
-                console.log(result);
-                console.log("----------");
-            });
-
-        // console.log("-----------");
-        // console.log(require("util").inspect(tree, false, null, true));
-        // console.log("----------");
-
         unified()
             .use(parseHTML, {
                 fragment: true,
@@ -240,11 +213,12 @@ async function processPost(post) {
             })
             .use(fixCodeBlocks)
             .use(rehype2remark)
+            .use(codeBlockDebugger)
             .use(articleCleanup)
             .use(stringify, {
                 fences: true,
                 listItemIndent: 1,
-                gfm: false,
+                gfm: true,
                 entities: "escape",
             })
             .process(postData.replace(/\n\n/g, "</p>"), (err, markdown) => {
