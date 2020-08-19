@@ -43,22 +43,22 @@ function codeBlockDebugger() {
     };
 }
 
-// this is a rehype plugin
-function fixCodeBlocks() {
-    function findCodeBlocks(node) {
-        let nodes = [];
+function findRehypeNodes(node, tagName) {
+    let nodes = [];
 
-        if (node.tagName === "pre") {
-            nodes.push(node);
-        } else if (node.children) {
-            for (let child of node.children) {
-                nodes.push(...findCodeBlocks(child));
-            }
+    if (node.tagName === tagName) {
+        nodes.push(node);
+    } else if (node.children) {
+        for (let child of node.children) {
+            nodes.push(...findRehypeNodes(child, tagName));
         }
-
-        return nodes;
     }
 
+    return nodes;
+}
+
+// this is a rehype plugin
+function fixCodeBlocks() {
     const settings = {
         quoteSmart: false,
         closeSelfClosing: false,
@@ -67,7 +67,7 @@ function fixCodeBlocks() {
     };
 
     return (tree) => {
-        const codeBlocks = findCodeBlocks(tree);
+        const codeBlocks = findRehypeNodes(tree, "pre");
 
         for (let block of codeBlocks) {
             const position = {
@@ -115,4 +115,96 @@ function fixCodeBlocks() {
     };
 }
 
-module.exports = { articleCleanup, fixCodeBlocks, codeBlockDebugger };
+// this is a rehype plugin
+// changes iframe and blockquote embeds to regular links
+function fixEmbeds() {
+    function isEmbeddable(iframe) {
+        return iframe.properties.src.match(
+            /^http(s)?:\/\/(www\.)?(youtube|youtu.be|codesandbox|codepen)/
+        );
+    }
+
+    function isTweet(blockquote) {
+        return (
+            blockquote.properties &&
+            blockquote.properties.className &&
+            blockquote.properties.className.includes("twitter-tweet")
+        );
+    }
+
+    function isInstagram(blockquote) {
+        return (
+            blockquote.properties &&
+            blockquote.properties.className &&
+            blockquote.properties.className.includes("instagram-media")
+        );
+    }
+
+    function isCodepen(paragraph) {
+        return (
+            paragraph.properties &&
+            paragraph.properties.className &&
+            paragraph.properties.className.includes("codepen")
+        );
+    }
+
+    return (tree) => {
+        const iframes = findRehypeNodes(tree, "iframe");
+        const blockquotes = findRehypeNodes(tree, "blockquote");
+        const paragraphs = findRehypeNodes(tree, "p");
+
+        for (let iframe of iframes) {
+            if (isEmbeddable(iframe)) {
+                iframe.type = "element";
+                iframe.tagName = "p";
+                iframe.children = [
+                    {
+                        type: "text",
+                        value: iframe.properties.src,
+                    },
+                ];
+            }
+        }
+
+        for (let blockquote of blockquotes) {
+            if (isTweet(blockquote)) {
+                const link = findRehypeNodes(blockquote, "a").pop();
+                blockquote.type = "element";
+                blockquote.tagName = "p";
+                blockquote.children = [
+                    { type: "text", value: link.properties.href },
+                ];
+            } else if (isInstagram(blockquote)) {
+                blockquote.type = "element";
+                blockquote.tagName = "p";
+                blockquote.children = [
+                    {
+                        type: "text",
+                        value: blockquote.properties.dataInstgrmPermalink,
+                    },
+                ];
+            }
+        }
+
+        for (let paragraph of paragraphs) {
+            if (isCodepen(paragraph)) {
+                const link = findRehypeNodes(paragraph, "a").shift();
+                paragraph.children = [
+                    {
+                        type: "text",
+                        value: link.properties.href,
+                    },
+                ];
+            }
+        }
+
+        return tree;
+    };
+}
+
+module.exports = {
+    articleCleanup,
+    fixCodeBlocks,
+    codeBlockDebugger,
+    fixEmbeds,
+};

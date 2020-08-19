@@ -10,6 +10,7 @@ const {
     articleCleanup,
     fixCodeBlocks,
     codeBlockDebugger,
+    fixEmbeds,
 } = require("./articleCleanup");
 
 const unified = require("unified");
@@ -217,13 +218,14 @@ async function processPost(post) {
                 duplicateAttribute: false,
             })
             .use(fixCodeBlocks)
+            .use(fixEmbeds)
             .use(rehype2remark)
             // .use(codeBlockDebugger)
             .use(articleCleanup)
             .use(stringify, {
                 fences: true,
                 listItemIndent: 1,
-                gfm: true,
+                gfm: false,
                 entities: "escape",
             })
             .process(postData.replace(/\n\n/g, "</p>"), (err, markdown) => {
