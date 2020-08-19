@@ -46,7 +46,10 @@ function processExport(file) {
 
 function constructImageName({ urlParts, buffer }) {
     const pathParts = path.parse(
-        urlParts.pathname.replace(/^\//, "").replace(/\//g, "-")
+        urlParts.pathname
+            .replace(/^\//, "")
+            .replace(/\//g, "-")
+            .replace(/\*/g, "")
     );
     const { ext } = imageType(new Buffer(buffer));
 
@@ -133,7 +136,9 @@ async function processPost(post) {
     console.log("Post length: " + postData.length + " bytes");
     const slug = slugify(postTitle, {
         remove: /[^\w\s]/g,
-    }).toLowerCase();
+    })
+        .toLowerCase()
+        .replace(/\*/g, "");
     console.log("Post slug: " + slug);
 
     // takes the longest description candidate
@@ -213,7 +218,7 @@ async function processPost(post) {
             })
             .use(fixCodeBlocks)
             .use(rehype2remark)
-            .use(codeBlockDebugger)
+            // .use(codeBlockDebugger)
             .use(articleCleanup)
             .use(stringify, {
                 fences: true,

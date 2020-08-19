@@ -37,7 +37,9 @@ function articleCleanup() {
 // this is a remark plugin
 function codeBlockDebugger() {
     return (markdownAST) => {
-        console.log(require("util").inspect(markdownAST, false, null, true));
+        visit(markdownAST, "code", (node) => {
+            console.log(require("util").inspect(node, false, null, true));
+        });
     };
 }
 
