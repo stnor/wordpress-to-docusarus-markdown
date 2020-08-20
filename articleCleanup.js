@@ -1,7 +1,7 @@
 const visit = require("unist-util-visit");
-const util = require("util");
 const htmlentities = require("he");
 const toHTML = require("hast-util-to-html");
+const prettier = require("prettier");
 
 // function cleanupPost(postData) {
 //     return postData.replace(/\n\n/g, "</p>").replace(/import/g, "\\import");
@@ -77,6 +77,7 @@ function fixCodeBlocks() {
         }
 
         html = html.replace(/&#39;/g, '"').replace(/&#34;/g, '"');
+        html = prettier.format(html);
 
         return html;
     }
@@ -118,10 +119,6 @@ function fixCodeBlocks() {
                 }
 
                 tree.properties = Object.fromEntries(props);
-
-                console.log("---------");
-                console.log(require("util").inspect(tree, false, null, true));
-                console.log("---------");
             }
         }
 

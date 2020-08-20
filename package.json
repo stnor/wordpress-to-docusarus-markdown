@@ -32,6 +32,7 @@
         "httpie": "^1.1.2",
         "image-type": "^4.1.0",
         "node-fetch": "^2.6.0",
+        "prettier": "^2.0.5",
         "rehype-parse": "^7.0.1",
         "rehype-remark": "^8.0.0",
         "rehype-stringify": "^8.0.0",
