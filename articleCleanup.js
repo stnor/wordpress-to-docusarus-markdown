@@ -69,8 +69,10 @@ function fixCodeBlocks() {
     function cleanBlockHTML(html, lang) {
         html = html
             .replace("</pre>", "")
-            .replace(/\<pre.*>/, "")
-            .replace(/\<p\>\<\/p\>/g, "\n\n");
+            .replace(/\<pre.*?>/, "")
+            .replace(/\<p\>\<\/p\>/g, "\n\n")
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">");
 
         while (html.match(/\<(.+\w+)="\{(.*)\}"(.*)\>/)) {
             html = html.replace(/\<(.+\w+)="\{(.*)\}"(.*)\>/, "<$1={$2}$3>");
@@ -78,28 +80,33 @@ function fixCodeBlocks() {
 
         html = html.replace(/&#39;/g, '"').replace(/&#34;/g, '"');
 
-        switch (lang) {
-            case "js":
-            case "javascript":
-                html = prettier.format(html, { parser: "babel" });
-                break;
-            case "ts":
-            case "typescript":
-                html = prettier.format(html, { parser: "babel-ts" });
-                break;
-            case "css":
-            case "less":
-            case "scss":
-            case "graphql":
-            case "html":
-            case "markdown":
-            case "mdx":
-            case "vue":
-            case "angular":
-            case "lwc":
-            case "yaml":
-                html = prettier.format(html, { parser: lang });
-                break;
+        try {
+            switch (lang) {
+                case "js":
+                case "javascript":
+                    html = prettier.format(html, { parser: "babel" });
+                    break;
+                case "ts":
+                case "typescript":
+                    html = prettier.format(html, { parser: "babel-ts" });
+                    break;
+                case "css":
+                case "less":
+                case "scss":
+                case "graphql":
+                case "html":
+                case "markdown":
+                case "mdx":
+                case "vue":
+                case "angular":
+                case "lwc":
+                case "yaml":
+                    html = prettier.format(html, { parser: lang });
+                    break;
+            }
+        } catch (e) {
+            console.log(`----- ERROR PRETTIFYING ${lang}`);
+            console.log(html);
         }
 
         return html;
@@ -155,6 +162,10 @@ function fixCodeBlocks() {
     return (tree) => {
         const codeBlocks = findRehypeNodes(tree, "pre");
 
+        // console.log("-----------");
+        // console.log(require("util").inspect(codeBlocks, false, null, true));
+        // console.log("----------");
+
         for (let block of codeBlocks) {
             const position = {
                 start: block.children[0].position.start,
@@ -193,11 +204,6 @@ function fixCodeBlocks() {
         // console.log("----------");
 
         return tree;
-        // visit(markdownAST, "code", (node, index, parent) => {
-        //     console.log(node);
-
-        //     return node;
-        // });
     };
 }
 
