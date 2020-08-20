@@ -131,7 +131,9 @@ async function processPost(post) {
 
     var postTitle = typeof post.title === "string" ? post.title : post.title[0];
     console.log("Post title: " + postTitle);
-    var postDate = new Date(post.pubDate);
+    var postDate = isFinite(new Date(post.pubDate))
+        ? new Date(post.pubDate)
+        : new Date(post["wp:post_date"]);
     console.log("Post Date: " + postDate);
     var postData = post["content:encoded"][0];
     console.log("Post length: " + postData.length + " bytes");
@@ -162,12 +164,6 @@ async function processPost(post) {
         .filter((url) => url.startsWith("http"));
 
     let heroImage = "";
-
-    try {
-        format(postDate, "yyyy-MM-dd");
-    } catch (e) {
-        console.log("INAVLID TIME", postDate);
-    }
 
     let directory = slug;
     let fname = `index.mdx`;
@@ -246,15 +242,20 @@ async function processPost(post) {
     const redirect_from = post.link[0]
         .replace("https://swizec.com", "")
         .replace("https://www.swizec.com", "");
-
-    let header = [
-        "---",
-        `title: '${postTitle.replace(/'/g, "''")}'`,
-        `description: "${description}"`,
-        `published: ${format(postDate, "yyyy-MM-dd")}`,
-        `redirect_from: 
+    let header;
+    try {
+        header = [
+            "---",
+            `title: '${postTitle.replace(/'/g, "''")}'`,
+            `description: "${description}"`,
+            `published: ${format(postDate, "yyyy-MM-dd")}`,
+            `redirect_from: 
             - ${redirect_from}`,
-    ];
+        ];
+    } catch (e) {
+        console.log("----------- BAD TIME", postTitle, postDate);
+        throw e;
+    }
 
     if (categories && categories.length > 0) {
         header.push(`categories: "${categories.join(", ")}"`);

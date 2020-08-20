@@ -70,9 +70,8 @@ function fixCodeBlocks() {
         html = html
             .replace("</pre>", "")
             .replace(/\<pre.*?>/, "")
-            .replace(/\<p\>\<\/p\>/g, "\n\n")
-            .replace(/&lt;/g, "<")
-            .replace(/&gt;/g, ">");
+            .replace(/\<p\>\<\/p\>/g, "\n\n");
+        html = htmlentities.decode(html);
 
         while (html.match(/\<(.+\w+)="\{(.*)\}"(.*)\>/)) {
             html = html.replace(/\<(.+\w+)="\{(.*)\}"(.*)\>/, "<$1={$2}$3>");
@@ -278,14 +277,26 @@ function fixEmbeds() {
             } else if (isInstagram(blockquote)) {
                 blockquote.type = "element";
                 blockquote.tagName = "p";
-                blockquote.children = [
-                    {
-                        type: "text",
-                        value: blockquote.properties.dataInstgrmPermalink.split(
-                            "?"
-                        )[0],
-                    },
-                ];
+
+                let link = blockquote.properties.dataInstgrmPermalink;
+                if (!link) {
+                    link = findRehypeNodes(blockquote, "a").shift();
+                }
+
+                try {
+                    blockquote.children = [
+                        {
+                            type: "text",
+                            value: link.split("?")[0],
+                        },
+                    ];
+                } catch (e) {
+                    console.log("---- BAD INSTA");
+                    console.log(
+                        require("util").inspect(blockquote, false, null, true)
+                    );
+                    throw e;
+                }
             }
         }
 
