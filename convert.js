@@ -19,7 +19,7 @@ const rehype2remark = require("rehype-remark");
 const stringify = require("remark-stringify");
 const imageType = require("image-type");
 
-processExport("ageekwithahat.wordpress.2020-08-13.xml");
+processExport("ageekwithahat.wordpress.2020-08-20.xml");
 
 function processExport(file) {
     var parser = new xml2js.Parser();

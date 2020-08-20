@@ -66,7 +66,7 @@ function fixCodeBlocks() {
         entities: { useShortestReferences: true },
     };
 
-    function cleanBlockHTML(html) {
+    function cleanBlockHTML(html, lang) {
         html = html
             .replace("</pre>", "")
             .replace(/\<pre.*>/, "")
@@ -77,7 +77,30 @@ function fixCodeBlocks() {
         }
 
         html = html.replace(/&#39;/g, '"').replace(/&#34;/g, '"');
-        html = prettier.format(html);
+
+        switch (lang) {
+            case "js":
+            case "javascript":
+                html = prettier.format(html, { parser: "babel" });
+                break;
+            case "ts":
+            case "typescript":
+                html = prettier.format(html, { parser: "babel-ts" });
+                break;
+            case "css":
+            case "less":
+            case "scss":
+            case "graphql":
+            case "html":
+            case "markdown":
+            case "mdx":
+            case "vue":
+            case "angular":
+            case "lwc":
+            case "yaml":
+                html = prettier.format(html, { parser: lang });
+                break;
+        }
 
         return html;
     }
@@ -153,7 +176,8 @@ function fixCodeBlocks() {
                         {
                             type: "text",
                             value: cleanBlockHTML(
-                                toHTML(fixJsxObjectProps(block), settings)
+                                toHTML(fixJsxObjectProps(block), settings),
+                                block.properties && block.properties.lang
                             ),
                             position,
                         },
