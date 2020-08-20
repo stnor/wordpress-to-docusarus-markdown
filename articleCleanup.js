@@ -66,6 +66,72 @@ function fixCodeBlocks() {
         entities: { useShortestReferences: true },
     };
 
+    function cleanBlockHTML(html) {
+        html = html
+            .replace("</pre>", "")
+            .replace(/\<pre.*>/, "")
+            .replace(/\<p\>\<\/p\>/g, "\n\n");
+
+        while (html.match(/\<(.+\w+)="\{(.*)\}"(.*)\>/)) {
+            html = html.replace(/\<(.+\w+)="\{(.*)\}"(.*)\>/, "<$1={$2}$3>");
+        }
+
+        html = html.replace(/&#39;/g, '"').replace(/&#34;/g, '"');
+
+        return html;
+    }
+
+    // fix props with prop={{ ... }} notation
+    // parsed into a mess of attributes style='{{', 'border:'='' ... '}}': ''
+    function fixJsxObjectProps(tree) {
+        if (tree.type === "element" && tree.properties) {
+            // bad props start with a broken prop='{{'
+            if (Object.values(tree.properties).some((val) => val === "{{")) {
+                let props = [];
+                let collecting = false;
+                let prop, propVal;
+
+                for (let [key, val] of Object.entries(tree.properties)) {
+                    if (val === "{{") {
+                        // the next several props are part of the object
+                        collecting = true;
+                        prop = key;
+                        propVal = [val];
+                    } else if (collecting) {
+                        // collect props
+                        propVal.push(`${key} ${val}`);
+
+                        if (key.includes("}}") || val.includes("}}")) {
+                            // stop collecting when done
+                            props.push([
+                                prop,
+                                propVal
+                                    .join(" ")
+                                    .replace(/[ ]{2,}/g, " ")
+                                    .trim(),
+                            ]);
+                            collecting = false;
+                        }
+                    } else {
+                        props.push([key, val]);
+                    }
+                }
+
+                tree.properties = Object.fromEntries(props);
+
+                console.log("---------");
+                console.log(require("util").inspect(tree, false, null, true));
+                console.log("---------");
+            }
+        }
+
+        if (tree.children) {
+            tree.children = tree.children.map(fixJsxObjectProps);
+        }
+
+        return tree;
+    }
+
     return (tree) => {
         const codeBlocks = findRehypeNodes(tree, "pre");
 
@@ -89,10 +155,9 @@ function fixCodeBlocks() {
                     children: [
                         {
                             type: "text",
-                            value: toHTML(block, settings)
-                                .replace("</pre>", "")
-                                .replace(/\<pre.*>/, "")
-                                .replace(/\<p\>\<\/p\>/g, "\n\n"),
+                            value: cleanBlockHTML(
+                                toHTML(fixJsxObjectProps(block), settings)
+                            ),
                             position,
                         },
                     ],
@@ -148,6 +213,15 @@ function fixEmbeds() {
         );
     }
 
+    function fixIframeLink(src) {
+        if (src.match(/(youtube\.com|youtu\.be)\/embed\//)) {
+            return src.replace("/embed/", "/watch?v=");
+        } else if (src.match(/codesandbox/)) {
+            return src.replace("/embed/", "/s/");
+        }
+        return src;
+    }
+
     return (tree) => {
         const iframes = findRehypeNodes(tree, "iframe");
         const blockquotes = findRehypeNodes(tree, "blockquote");
@@ -160,7 +234,7 @@ function fixEmbeds() {
                 iframe.children = [
                     {
                         type: "text",
-                        value: iframe.properties.src,
+                        value: fixIframeLink(iframe.properties.src),
                     },
                 ];
             }
@@ -180,7 +254,9 @@ function fixEmbeds() {
                 blockquote.children = [
                     {
                         type: "text",
-                        value: blockquote.properties.dataInstgrmPermalink,
+                        value: blockquote.properties.dataInstgrmPermalink.split(
+                            "?"
+                        )[0],
                     },
                 ];
             }
