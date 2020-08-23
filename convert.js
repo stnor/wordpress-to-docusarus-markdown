@@ -21,11 +21,11 @@ const stringify = require("remark-stringify");
 const imageType = require("image-type");
 
 // bad codesandbox?
-processExport("ageekwithahat.wordpress.2020-08-22.xml");
+// processExport("ageekwithahat.wordpress.2020-08-22.xml");
 // adversarial example
-// processExport("ageekwithahat.wordpress.2020-08-13.xml");
+processExport("ageekwithahat.wordpress.2020-08-13.xml");
 // full dump
-// processExport("ageekwithahat.wordpress.2020-08-20.xml");
+// processExport("ageekwithahat.wordpress.2020-08-22 (1).xml");
 
 function processExport(file) {
     var parser = new xml2js.Parser();
@@ -227,14 +227,16 @@ async function processPost(post) {
                 fences: true,
                 listItemIndent: 1,
                 gfm: false,
-                entities: "escape",
+                pedantic: false,
             })
             .process(postData.replace(/\n\n/g, "</p>"), (err, markdown) => {
                 if (err) {
                     reject(err);
                 } else {
+                    let content = markdown.contents
+                    content = content.replace(/(?<=https?:\/\/.*)\\_(?=.*\n)/g, '_')
                     resolve(
-                        prettier.format(markdown.contents, { parser: "mdx" })
+                        prettier.format(content, { parser: "mdx" })
                     );
                 }
             });

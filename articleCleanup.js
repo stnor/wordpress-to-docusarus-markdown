@@ -14,23 +14,43 @@ function articleCleanup() {
         //     console.log(node);
         //     return node;
         // });
+        // visit(markdownAST, "text", (node, index, parent) => {
+        //     node.value = htmlentities.decode(node.value);
+        //     if (
+        //         node.value &&
+        //         node.value.startsWith("http") &&
+        //         parent.type !== "link"
+        //     ) {
+        //         node.type = "text";
+        //         node.title = null;
+        //     }
+        //     return node;
+        // });
 
-        visit(markdownAST, "text", (node, index, parent) => {
-            node.value = htmlentities.decode(node.value);
-            node.value = node.value.replace(/https\:/, "https:");
-            node.value = node.value.replace(/http\:/, "http:");
+        // visit(markdownAST, 'link', (node) => {
+        //     console.log(require('util').inspect(node, false, null, true))
+        // })
 
-            if (
-                node.value &&
-                node.value.startsWith("http") &&
-                parent.type !== "link"
-            ) {
-                node.type = "text";
-                node.title = null;
-            }
-
-            return node;
-        });
+        // visit(markdownAST, "text", (node, index, parent) => {
+        //     if (
+        //         node.value &&
+        //         node.value.startsWith("http") &&
+        //         parent.type !== "link"
+        //     ) {
+        //         node.type = 'link'
+        //         node.url = node.value
+        //         node.value = null
+        //         node.children = []
+        //         // return {
+        //         //     type: 'link',
+        //         //     title: null,
+        //         //     url: node.value,
+        //         //     children: []
+        //         // }
+        //     } else {
+        //         return node;
+        //     }
+        // });
     };
 }
 
