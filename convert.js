@@ -8,7 +8,7 @@ const fs = require("fs");
 const slugify = require("slugify");
 const htmlentities = require("he");
 const {
-    articleCleanup,
+    cleanupShortcodes,
     fixCodeBlocks,
     codeBlockDebugger,
     fixEmbeds,
@@ -212,6 +212,7 @@ async function processPost(post) {
     }
 
     const markdown = await new Promise((resolve, reject) => {
+        console.log(postData.replace(/\n\n/g, "</p>"));
         unified()
             .use(parseHTML, {
                 fragment: true,
@@ -222,22 +223,23 @@ async function processPost(post) {
             .use(fixEmbeds)
             .use(rehype2remark)
             // .use(codeBlockDebugger)
-            .use(articleCleanup)
+            .use(cleanupShortcodes)
             .use(stringify, {
                 fences: true,
                 listItemIndent: 1,
                 gfm: false,
                 pedantic: false,
             })
-            .process(postData.replace(/\n\n/g, "</p>"), (err, markdown) => {
+            .process(postData.replace(/\n\n/g, "<p></p>"), (err, markdown) => {
                 if (err) {
                     reject(err);
                 } else {
-                    let content = markdown.contents
-                    content = content.replace(/(?<=https?:\/\/.*)\\_(?=.*\n)/g, '_')
-                    resolve(
-                        prettier.format(content, { parser: "mdx" })
+                    let content = markdown.contents;
+                    content = content.replace(
+                        /(?<=https?:\/\/.*)\\_(?=.*\n)/g,
+                        "_"
                     );
+                    resolve(prettier.format(content, { parser: "mdx" }));
                 }
             });
     });

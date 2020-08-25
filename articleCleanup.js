@@ -2,55 +2,94 @@ const visit = require("unist-util-visit");
 const htmlentities = require("he");
 const toHTML = require("hast-util-to-html");
 const prettier = require("prettier");
+const { debug } = require("console");
 
-// function cleanupPost(postData) {
-//     return postData.replace(/\n\n/g, "</p>").replace(/import/g, "\\import");
+// // this is a remark plugin
+// function articleCleanup() {
+//     return (markdownAST) => {
+//         console.log(require("util").inspect(markdownAST, false, null, true));
+
+//         // visit(markdownAST, "pre", (node) => {
+//         //     console.log(node);
+//         //     return node;
+//         // });
+//         // visit(markdownAST, "text", (node, index, parent) => {
+//         //     node.value = htmlentities.decode(node.value);
+//         //     if (
+//         //         node.value &&
+//         //         node.value.startsWith("http") &&
+//         //         parent.type !== "link"
+//         //     ) {
+//         //         node.type = "text";
+//         //         node.title = null;
+//         //     }
+//         //     return node;
+//         // });
+//         // visit(markdownAST, 'link', (node) => {
+//         //     console.log(require('util').inspect(node, false, null, true))
+//         // })
+//         // visit(markdownAST, "text", (node, index, parent) => {
+//         //     if (
+//         //         node.value &&
+//         //         node.value.startsWith("http") &&
+//         //         parent.type !== "link"
+//         //     ) {
+//         //         node.type = 'link'
+//         //         node.url = node.value
+//         //         node.value = null
+//         //         node.children = []
+//         //         // return {
+//         //         //     type: 'link',
+//         //         //     title: null,
+//         //         //     url: node.value,
+//         //         //     children: []
+//         //         // }
+//         //     } else {
+//         //         return node;
+//         //     }
+//         // });
+//     };
 // }
 
+function debugTree(tree) {
+    console.log(require("util").inspect(tree, false, null, true));
+}
+
 // this is a remark plugin
-function articleCleanup() {
-    return (markdownAST) => {
-        // visit(markdownAST, "pre", (node) => {
-        //     console.log(node);
-        //     return node;
-        // });
-        // visit(markdownAST, "text", (node, index, parent) => {
-        //     node.value = htmlentities.decode(node.value);
-        //     if (
-        //         node.value &&
-        //         node.value.startsWith("http") &&
-        //         parent.type !== "link"
-        //     ) {
-        //         node.type = "text";
-        //         node.title = null;
-        //     }
-        //     return node;
-        // });
+function cleanupShortcodes() {
+    const shortCodeOpenTag = /\[\w+ .*\]/g;
+    const shortCodeCloseTag = /\[\/\w+]/g;
+    const embedShortCode = /\[\w+ (https?:\/\/.*)\]/g;
+    const captionShortCode = /\[caption.*\]/g;
 
-        // visit(markdownAST, 'link', (node) => {
-        //     console.log(require('util').inspect(node, false, null, true))
-        // })
+    return (tree) => {
+        visit(tree, "text", (node, index, parent) => {
+            if (parent.type === "paragraph" && node.value) {
+                // preserve embed shortcodes as plain URLs
+                if (node.value.match(embedShortCode)) {
+                    node.value = node.value.replace(embedShortCode, "$1");
+                }
 
-        // visit(markdownAST, "text", (node, index, parent) => {
-        //     if (
-        //         node.value &&
-        //         node.value.startsWith("http") &&
-        //         parent.type !== "link"
-        //     ) {
-        //         node.type = 'link'
-        //         node.url = node.value
-        //         node.value = null
-        //         node.children = []
-        //         // return {
-        //         //     type: 'link',
-        //         //     title: null,
-        //         //     url: node.value,
-        //         //     children: []
-        //         // }
-        //     } else {
-        //         return node;
-        //     }
-        // });
+                // turn [caption] shortcodes into clean images
+                if (node.value.match(captionShortCode)) {
+                    visit(parent, "text", (node) => {
+                        node.value = "";
+                    });
+                    visit(parent, "link", (node) => {
+                        node.type = "image";
+                        node.title = node.children[0].title;
+                        node.alt = node.children[0].alt;
+                        node.url = node.children[0].url;
+                        node.children = [];
+                    });
+                }
+
+                // remove other shortcodes
+                node.value = node.value
+                    .replace(shortCodeOpenTag, "")
+                    .replace(shortCodeCloseTag, "");
+            }
+        });
     };
 }
 
@@ -337,7 +376,7 @@ function fixEmbeds() {
 }
 
 module.exports = {
-    articleCleanup,
+    cleanupShortcodes,
     fixCodeBlocks,
     codeBlockDebugger,
     fixEmbeds,
