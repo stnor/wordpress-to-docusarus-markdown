@@ -2,54 +2,11 @@ const visit = require("unist-util-visit");
 const htmlentities = require("he");
 const toHTML = require("hast-util-to-html");
 const prettier = require("prettier");
-const { debug } = require("console");
 
-// // this is a remark plugin
-// function articleCleanup() {
-//     return (markdownAST) => {
-//         console.log(require("util").inspect(markdownAST, false, null, true));
-
-//         // visit(markdownAST, "pre", (node) => {
-//         //     console.log(node);
-//         //     return node;
-//         // });
-//         // visit(markdownAST, "text", (node, index, parent) => {
-//         //     node.value = htmlentities.decode(node.value);
-//         //     if (
-//         //         node.value &&
-//         //         node.value.startsWith("http") &&
-//         //         parent.type !== "link"
-//         //     ) {
-//         //         node.type = "text";
-//         //         node.title = null;
-//         //     }
-//         //     return node;
-//         // });
-//         // visit(markdownAST, 'link', (node) => {
-//         //     console.log(require('util').inspect(node, false, null, true))
-//         // })
-//         // visit(markdownAST, "text", (node, index, parent) => {
-//         //     if (
-//         //         node.value &&
-//         //         node.value.startsWith("http") &&
-//         //         parent.type !== "link"
-//         //     ) {
-//         //         node.type = 'link'
-//         //         node.url = node.value
-//         //         node.value = null
-//         //         node.children = []
-//         //         // return {
-//         //         //     type: 'link',
-//         //         //     title: null,
-//         //         //     url: node.value,
-//         //         //     children: []
-//         //         // }
-//         //     } else {
-//         //         return node;
-//         //     }
-//         // });
-//     };
-// }
+function fixBadHTML(html) {
+    html = html.replace(/(\r?\n){2}/g, "<p></p>");
+    return html;
+}
 
 function debugTree(tree) {
     console.log(require("util").inspect(tree, false, null, true));
@@ -380,4 +337,5 @@ module.exports = {
     fixCodeBlocks,
     codeBlockDebugger,
     fixEmbeds,
+    fixBadHTML,
 };

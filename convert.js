@@ -11,6 +11,7 @@ const {
     cleanupShortcodes,
     fixCodeBlocks,
     codeBlockDebugger,
+    fixBadHTML,
     fixEmbeds,
 } = require("./articleCleanup");
 
@@ -229,7 +230,7 @@ async function processPost(post) {
                 gfm: false,
                 pedantic: false,
             })
-            .process(postData.replace(/\n\n/g, "<p></p>"), (err, markdown) => {
+            .process(fixBadHTML(postData), (err, markdown) => {
                 if (err) {
                     reject(err);
                 } else {
