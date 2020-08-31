@@ -21,12 +21,10 @@ const rehype2remark = require("rehype-remark");
 const stringify = require("remark-stringify");
 const imageType = require("image-type");
 
-// bad codesandbox?
-// processExport("ageekwithahat.wordpress.2020-08-22.xml");
-// adversarial example
-// processExport("ageekwithahat.wordpress.2020-08-13.xml");
+// includes all sorts of edge cases and weird stuff
+processExport("test-wordpress-dump.xml");
 // full dump
-processExport("ageekwithahat.wordpress.2020-08-22 (1).xml");
+// processExport("ageekwithahat.wordpress.2020-08-22 (1).xml");
 
 function processExport(file) {
     var parser = new xml2js.Parser();

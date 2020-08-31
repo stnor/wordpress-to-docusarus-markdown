@@ -86,7 +86,9 @@ function fixCodeBlocks() {
         html = html
             .replace("</pre>", "")
             .replace(/\<pre.*?>/, "")
-            .replace(/\<p\>\<\/p\>/g, "\n\n");
+            .replace(/\<p\>\<\/p\>/g, "\n\n")
+            .replace(/^<code>/, "")
+            .replace(/<\/code>$/, "");
         html = htmlentities.decode(html);
 
         while (html.match(/\<(.+\w+)="\{(.*)\}"(.*)\>/)) {
@@ -182,21 +184,14 @@ function fixCodeBlocks() {
         // console.log("----------");
 
         for (let block of codeBlocks) {
-            const position = {
-                start: block.children[0].position.start,
-                end: block.children[block.children.length - 1].position.end,
-            };
+            const lang = block.properties && block.properties.lang;
 
             block.children = [
                 {
                     type: "element",
                     tagName: "code",
                     properties: {
-                        className: [
-                            `language-${
-                                block.properties && block.properties.lang
-                            }`,
-                        ],
+                        className: lang ? [`language-${lang}`] : null,
                     },
                     children: [
                         {
@@ -205,10 +200,8 @@ function fixCodeBlocks() {
                                 toHTML(fixJsxObjectProps(block), settings),
                                 block.properties && block.properties.lang
                             ),
-                            position,
                         },
                     ],
-                    position,
                 },
             ];
         }
