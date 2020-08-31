@@ -27,15 +27,16 @@ processExport("test-wordpress-dump.xml");
 // processExport("ageekwithahat.wordpress.2020-08-22 (1).xml");
 
 function processExport(file) {
-    var parser = new xml2js.Parser();
+    const parser = new xml2js.Parser();
+
     fs.readFile(file, function (err, data) {
         if (err) {
-            console.log("Error: " + err);
+            return console.log("Error: " + err);
         }
 
         parser.parseString(data, function (err, result) {
             if (err) {
-                console.log("Error parsing xml: " + err);
+                return console.log("Error parsing xml: " + err);
             }
             console.log("Parsed XML");
 
@@ -133,13 +134,14 @@ async function processImages({ postData, directory }) {
 async function processPost(post) {
     console.log("Processing Post");
 
-    var postTitle = typeof post.title === "string" ? post.title : post.title[0];
+    const postTitle =
+        typeof post.title === "string" ? post.title : post.title[0];
     console.log("Post title: " + postTitle);
-    var postDate = isFinite(new Date(post.pubDate))
+    const postDate = isFinite(new Date(post.pubDate))
         ? new Date(post.pubDate)
         : new Date(post["wp:post_date"]);
     console.log("Post Date: " + postDate);
-    var postData = post["content:encoded"][0];
+    let postData = post["content:encoded"][0];
     console.log("Post length: " + postData.length + " bytes");
     const slug = slugify(postTitle, {
         remove: /[^\w\s]/g,
@@ -200,16 +202,6 @@ async function processPost(post) {
 
     heroImage = images.find((img) => !img.endsWith("gif"));
 
-    if (!heroImage) {
-        [postData, images] = await processImages({
-            url: "https://i.imgur.com/dFmiPtD.jpg",
-            postData,
-            images,
-            directory,
-        });
-        heroImage = images[images.length - 1];
-    }
-
     const markdown = await new Promise((resolve, reject) => {
         unified()
             .use(parseHTML, {
@@ -220,7 +212,6 @@ async function processPost(post) {
             .use(fixCodeBlocks)
             .use(fixEmbeds)
             .use(rehype2remark)
-            // .use(codeBlockDebugger)
             .use(cleanupShortcodes)
             .use(stringify, {
                 fences: true,
@@ -251,9 +242,9 @@ async function processPost(post) {
     const redirect_from = post.link[0]
         .replace("https://swizec.com", "")
         .replace("https://www.swizec.com", "");
-    let header;
+    let frontmatter;
     try {
-        header = [
+        frontmatter = [
             "---",
             `title: '${postTitle.replace(/'/g, "''")}'`,
             `description: "${description}"`,
@@ -267,16 +258,16 @@ async function processPost(post) {
     }
 
     if (categories && categories.length > 0) {
-        header.push(`categories: "${categories.join(", ")}"`);
+        frontmatter.push(`categories: "${categories.join(", ")}"`);
     }
 
-    header.push(`hero: ${heroImage || "../../../defaultHero.jpg"}`);
-    header.push("---");
-    header.push("");
+    frontmatter.push(`hero: ${heroImage || "../../../defaultHero.jpg"}`);
+    frontmatter.push("---");
+    frontmatter.push("");
 
     fs.writeFile(
         `out/${directory}/${fname}`,
-        header.join("\n") + markdown,
+        frontmatter.join("\n") + markdown,
         function (err) {}
     );
 }
