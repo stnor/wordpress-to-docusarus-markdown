@@ -4,16 +4,11 @@ This script uses the standard exported XML file from WordPress, and creates a fo
 
 Instructions for exporting your information from WordPress [can be found here](http://en.support.wordpress.com/export/).
 
-This is a upgraded version of the original project. I fixed a bunch of issues and edge cases. [You can read about it here](https://swizec.com/blog/how-to-export-a-large-wordpress-site-to-markdown/)
-
+This is a fork of [Swizec's improvements](https://swizec.com/blog/how-to-export-a-large-wordpress-site-to-markdown/) that is targeting migration to *Docusaurus* blogs. I didn't bother to adapt the metadata generation, so that may npt work as intended for your use-case.
 
 ## Works on my box
 
-I tested this on my machine and my blog. The blog is 14 years old with 1500+ posts and I hope that makes this script battle tested.
-
-It seems to have worked for someone else too ✌️
-
-[![](https://i.imgur.com/tajlNWE.png)](https://twitter.com/akhromieiev/status/1301526142898364417)
+It worked to convert our ten year old blog. Your milage may vary.
 
 ## Usage
 
