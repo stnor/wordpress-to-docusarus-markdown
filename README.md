@@ -12,7 +12,10 @@ It worked to convert our ten year old blog. Your milage may vary.
 
 ## Usage
 
-This program will put the output into `/out` folder, and also all images will go to `/img`. Image urls are rewritten to `./img`, which is what most markdown static site generators enjoy.
+This program will put the output into `./out` folder, and also all images will go to `/img`.
+All posts are written to `./out` in the `YYYY-MM-DD-title-of-post.md` style.
+All images are written to `./out//img`. If you have duplicate image file names, this will be an issue :)
+
 
 Export your Wordpress to XML then:
 

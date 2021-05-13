@@ -1,15 +1,24 @@
 {
-    "title": "Wordpress to Markdown",
-    "name": "wordpress-to-markdown",
+    "title": "Wordpress to Docusarus Markdown",
+    "name": "wordpress-to-docusarus-markdown",
     "keywords": [
         "wordpress",
         "markdown",
+        "docusarus",
         "convert"
     ],
-    "author": "Swizec Teller",
-    "bugs": {
-        "url": "https://github.com/swizec/wordpress-to-markdown/issues"
-    },
+    "author": "Stefan Norberg",
+    "contrubutors": [
+        {
+            "name": "Jason Young"
+        },
+        {
+            "name": "Yiping Deng"
+        },
+        {
+            "name": "Swizec Teller"
+        }
+    ],
     "scripts": {
         "clean": "rm -rf out",
         "convert": "yarn clean && node convert.js",
@@ -19,7 +28,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/swizec/wordpress-to-markdown.git"
+        "url": "https://github.com/stnor/wordpress-to-docusarus-markdown"
     },
     "engines": {
         "node": ">=0.8",

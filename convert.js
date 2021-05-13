@@ -22,9 +22,9 @@ const stringify = require("remark-stringify");
 const imageType = require("image-type");
 
 // includes all sorts of edge cases and weird stuff
-processExport("test-wordpress-dump.xml");
+//processExport("test-wordpress-dump.xml");
 // full dump
-// processExport("ageekwithahat.wordpress.2020-08-22 (1).xml");
+processExport("nompbloggen.WordPress.2021-05-12.xml");
 
 function processExport(file) {
     const parser = new xml2js.Parser();
@@ -74,7 +74,7 @@ async function processImage({ url, postData, images, directory }) {
 
     const urlParts = new URL(cleanUrl);
 
-    const filePath = `out/${directory}/img`;
+    const filePath = `out/img`;
 
     try {
         const response = await downloadFile(cleanUrl);
@@ -175,12 +175,8 @@ async function processPost(post) {
     let fname = `index.mdx`;
 
     try {
-        fs.mkdirSync(`out/${directory}`);
-        fs.mkdirSync(`out/${directory}/img`);
+        fs.mkdirSync(`out/img`);
     } catch (e) {
-        directory = directory + "-2";
-        fs.mkdirSync(`out/${directory}`);
-        fs.mkdirSync(`out/${directory}/img`);
     }
 
     //Merge categories and tags into tags
@@ -266,9 +262,11 @@ async function processPost(post) {
     frontmatter.push("");
 
     fs.writeFile(
-        `out/${directory}/${fname}`,
+        `out/${format(postDate, "yyyy-MM-dd")}-${directory}.md`,
         frontmatter.join("\n") + markdown,
-        function (err) {}
+        function (err) {
+            console.log(err)
+        }
     );
 }
 
